@@ -1,5 +1,5 @@
 
-# ProyectoFinalPython
+# Proyecto Final Python, Programacion III
 <br>
 INTEGRANTES:
 <br>
