@@ -1,5 +1,4 @@
 # ProyectoFinalPython
-Erick Josué Chavez Moraga
 <br>
 SMTR050123 HERNANDEZ RIVERA MELVIN ALEXANDER 
 <br>
