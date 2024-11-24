@@ -204,7 +204,7 @@ class LibretaContactosApp:
                 return
             servidor = smtplib.SMTP("smtp.gmail.com", 587)
             servidor.starttls()
-            servidor.login("riveramelvin628@gmail.com", "wvat ixwk jgoo nawy")
+            servidor.login("riveramelvin628@gmail.com", "xtqm uagl sjpv btew")
             
             mensaje = MIMEMultipart()
             mensaje["From"] = "riveramelvin628@gmail.com"
