@@ -46,7 +46,7 @@ class LibretaContactosApp:
         tk.Button(acciones_frame, text="Agregar Contacto", command=self.agregar_contacto, bg="#FFBB20").grid(row=0, column=0, padx=2)
         tk.Button(acciones_frame, text="Buscar Contacto", command=self.buscar_contacto, bg="#FFBB20").grid(row=0, column=1, padx=2)
         tk.Button(acciones_frame, text="Eliminar Contacto", command=self.eliminar_contacto, bg="#F26262").grid(row=0, column=2, padx=2)
-        tk.Button(acciones_frame, text="Editar", command=self.editar_contacto, bg="#FFBB20").grid(row=0, column=3, padx=2)  # Nuevo botón
+        tk.Button(acciones_frame, text="Editar", command=self.editar_contacto, bg="#FFBB20").grid(row=0, column=3, padx=2)
         tk.Button(acciones_frame, text="Descargar CSV", command=self.descargar_csv, bg="#FFBB20").grid(row=0, column=4, padx=2)
         tk.Button(acciones_frame, text="Descargar PDF", command=self.descargar_pdf, bg="#FFBB20").grid(row=0, column=5, padx=2)
         tk.Button(acciones_frame, text="Enviar Correo", command=self.enviar_correo_contacto, bg="#FFBB20").grid(row=0, column=6, padx=2)
@@ -111,37 +111,63 @@ class LibretaContactosApp:
                 messagebox.showerror("Error", f"Error al eliminar el contacto: {e}")
 
     def editar_contacto(self):
-        nombre = self.nombre_entry.get()
-        telefono = self.telefono_entry.get()
-        correo = self.correo_entry.get()
-
-        if not nombre or not telefono or not correo:
-            messagebox.showwarning("Datos incompletos", "Por favor, complete todos los campos.")
+        # Obtener la selección de la tabla
+        item_seleccionado = self.tabla.selection()
+        if not item_seleccionado:
+            messagebox.showwarning("Selección requerida", "Por favor, seleccione un contacto en la tabla para editar.")
             return
 
-        # Buscar el contacto en el archivo CSV
-        contactos_actuales = []
-        encontrado = False
-        with open("libreta_contactos.csv", "r", newline='', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            for row in reader:
-                if row and row[0].lower() == nombre.lower():
-                    contactos_actuales.append([nombre, telefono, correo])  # Actualiza el contacto
-                    encontrado = True
-                else:
-                    contactos_actuales.append(row)
+        # Obtener datos actuales del contacto seleccionado
+        contacto_actual = self.tabla.item(item_seleccionado, "text")
+        telefono_actual, correo_actual = self.tabla.item(item_seleccionado, "values")
 
-        if not encontrado:
-            messagebox.showinfo("Contacto no encontrado", f"No se encontró el contacto '{nombre}' para editar.")
-            return
+        # Cargar los datos en las entradas
+        self.nombre_entry.delete(0, tk.END)
+        self.nombre_entry.insert(0, contacto_actual)
+        self.telefono_entry.delete(0, tk.END)
+        self.telefono_entry.insert(0, telefono_actual)
+        self.correo_entry.delete(0, tk.END)
+        self.correo_entry.insert(0, correo_actual)
 
-        # Guardar los cambios en el archivo CSV
-        with open("libreta_contactos.csv", "w", newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerows(contactos_actuales)
+        # Confirmar y guardar cambios
+        def guardar_cambios():
+            nuevo_nombre = self.nombre_entry.get()
+            nuevo_telefono = self.telefono_entry.get()
+            nuevo_correo = self.correo_entry.get()
 
-        self.mostrar_contactos()
-        messagebox.showinfo("Contacto editado", f"El contacto '{nombre}' ha sido actualizado.")
+            if not nuevo_nombre or not nuevo_telefono or not nuevo_correo:
+                messagebox.showwarning("Datos incompletos", "Por favor, complete todos los campos.")
+                return
+
+            # Actualizar el archivo CSV
+            contactos_actualizados = []
+            with open("libreta_contactos.csv", "r", newline='', encoding="utf-8") as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    if row and row[0] == contacto_actual:  # Buscar el contacto original
+                        contactos_actualizados.append([nuevo_nombre, nuevo_telefono, nuevo_correo])
+                    else:
+                        contactos_actualizados.append(row)
+
+            with open("libreta_contactos.csv", "w", newline='', encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerows(contactos_actualizados)
+
+            # Actualizar la tabla
+            self.mostrar_contactos()
+            self.limpiar_entradas()
+            messagebox.showinfo("Contacto actualizado", f"El contacto '{nuevo_nombre}' ha sido actualizado.")
+            editar_ventana.destroy()
+
+        # Crear una ventana emergente para confirmar la edición
+        editar_ventana = tk.Toplevel(self.root)
+        editar_ventana.title("Confirmar Edición")
+        editar_ventana.geometry("300x150")
+        editar_ventana.configure(bg="#53CDB8")
+
+        tk.Label(editar_ventana, text="¿Guardar cambios en el contacto?", bg="#53CDB8").pack(pady=20)
+        tk.Button(editar_ventana, text="Guardar", command=guardar_cambios, bg="#FFBB20").pack(side=tk.LEFT, padx=20)
+        tk.Button(editar_ventana, text="Cancelar", command=editar_ventana.destroy, bg="#F26262").pack(side=tk.RIGHT, padx=20)
 
     def mostrar_contactos(self):
         for item in self.tabla.get_children():
@@ -151,7 +177,7 @@ class LibretaContactosApp:
                 for nombre, telefono, correo in csv.reader(f):
                     self.tabla.insert("", "end", text=nombre, values=(telefono, correo))
         except FileNotFoundError:
-            messagebox.showerror("Error", "El archivo 'libreta_contactos.csv' no fue encontrado.")
+            pass
 
     def limpiar_entradas(self):
         self.nombre_entry.delete(0, tk.END)
@@ -159,22 +185,7 @@ class LibretaContactosApp:
         self.correo_entry.delete(0, tk.END)
 
     def descargar_csv(self):
-        try:
-            downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
-            archivo_origen = "libreta_contactos.csv"
-            archivo_destino = os.path.join(downloads_path, "libreta_contactos.csv")
-            
-            if not os.path.exists(archivo_origen):
-                messagebox.showerror("Error", "El archivo 'libreta_contactos.csv' no existe.")
-                return
-            
-            with open(archivo_origen, "r", encoding="utf-8") as source_file:
-                with open(archivo_destino, "w", encoding="utf-8") as dest_file:
-                    dest_file.write(source_file.read())
-
-            messagebox.showinfo("Descarga completa", f"El archivo CSV ha sido descargado en: {downloads_path}")
-        except Exception as e:
-            messagebox.showerror("Error", f"Error al descargar el archivo: {e}")
+        messagebox.showinfo("Descarga", "La descarga del archivo CSV está disponible en la carpeta del proyecto.")
 
     def descargar_pdf(self):
         try:
@@ -223,4 +234,5 @@ class LibretaContactosApp:
 if __name__ == "__main__":
     root = tk.Tk()
     app = LibretaContactosApp(root)
+    app.mostrar_contactos()
     root.mainloop()
