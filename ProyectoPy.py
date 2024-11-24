@@ -3,6 +3,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox, Menu
 import csv
 from fpdf import FPDF
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 class LibretaContactosApp:
     def __init__(self, root):
@@ -43,8 +46,10 @@ class LibretaContactosApp:
         tk.Button(acciones_frame, text="Agregar Contacto", command=self.agregar_contacto, bg="#FFBB20").grid(row=0, column=0, padx=2)
         tk.Button(acciones_frame, text="Buscar Contacto", command=self.buscar_contacto, bg="#FFBB20").grid(row=0, column=1, padx=2)
         tk.Button(acciones_frame, text="Eliminar Contacto", command=self.eliminar_contacto, bg="#F26262").grid(row=0, column=2, padx=2)
-        tk.Button(acciones_frame, text="Descargar CSV", command=self.descargar_csv, bg="#FFBB20").grid(row=0, column=3, padx=2)
-        tk.Button(acciones_frame, text="Descargar PDF", command=self.descargar_pdf, bg="#FFBB20").grid(row=0, column=4, padx=2)
+        tk.Button(acciones_frame, text="Editar", command=self.editar_contacto, bg="#FFBB20").grid(row=0, column=3, padx=2)  # Nuevo botón
+        tk.Button(acciones_frame, text="Descargar CSV", command=self.descargar_csv, bg="#FFBB20").grid(row=0, column=4, padx=2)
+        tk.Button(acciones_frame, text="Descargar PDF", command=self.descargar_pdf, bg="#FFBB20").grid(row=0, column=5, padx=2)
+        tk.Button(acciones_frame, text="Enviar Correo", command=self.enviar_correo_contacto, bg="#FFBB20").grid(row=0, column=6, padx=2)
 
         # Tabla de contactos
         self.tabla = ttk.Treeview(self.root, columns=("Teléfono", "Correo"), height=15)
@@ -105,6 +110,39 @@ class LibretaContactosApp:
             except Exception as e:
                 messagebox.showerror("Error", f"Error al eliminar el contacto: {e}")
 
+    def editar_contacto(self):
+        nombre = self.nombre_entry.get()
+        telefono = self.telefono_entry.get()
+        correo = self.correo_entry.get()
+
+        if not nombre or not telefono or not correo:
+            messagebox.showwarning("Datos incompletos", "Por favor, complete todos los campos.")
+            return
+
+        # Buscar el contacto en el archivo CSV
+        contactos_actuales = []
+        encontrado = False
+        with open("libreta_contactos.csv", "r", newline='', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if row and row[0].lower() == nombre.lower():
+                    contactos_actuales.append([nombre, telefono, correo])  # Actualiza el contacto
+                    encontrado = True
+                else:
+                    contactos_actuales.append(row)
+
+        if not encontrado:
+            messagebox.showinfo("Contacto no encontrado", f"No se encontró el contacto '{nombre}' para editar.")
+            return
+
+        # Guardar los cambios en el archivo CSV
+        with open("libreta_contactos.csv", "w", newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerows(contactos_actuales)
+
+        self.mostrar_contactos()
+        messagebox.showinfo("Contacto editado", f"El contacto '{nombre}' ha sido actualizado.")
+
     def mostrar_contactos(self):
         for item in self.tabla.get_children():
             self.tabla.delete(item)
@@ -142,34 +180,45 @@ class LibretaContactosApp:
         try:
             downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
             archivo_pdf = os.path.join(downloads_path, "libreta_contactos.pdf")
-
+            
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", size=12)
             pdf.cell(200, 10, txt="Libreta de Contactos", ln=True, align="C")
-            pdf.ln(10)
 
-            # Encabezados
-            pdf.set_font("Arial", size=10, style="B")
-            pdf.cell(60, 10, "Nombre", border=1, align="C")
-            pdf.cell(60, 10, "Teléfono", border=1, align="C")
-            pdf.cell(60, 10, "Correo", border=1, align="C")
-            pdf.ln()
-
-            # Datos
-            pdf.set_font("Arial", size=10)
-            with open("libreta_contactos.csv", "r", encoding="utf-8") as f:
-                reader = csv.reader(f)
-                for nombre, telefono, correo in reader:
-                    pdf.cell(60, 10, nombre, border=1)
-                    pdf.cell(60, 10, telefono, border=1)
-                    pdf.cell(60, 10, correo, border=1)
-                    pdf.ln()
+            with open("libreta_contactos.csv", "r", newline='', encoding="utf-8") as f:
+                for nombre, telefono, correo in csv.reader(f):
+                    pdf.ln(10)
+                    pdf.cell(200, 10, txt=f"{nombre} - {telefono} - {correo}", ln=True)
 
             pdf.output(archivo_pdf)
-            messagebox.showinfo("Descarga completa", f"El archivo PDF ha sido descargado en: {downloads_path}")
+            messagebox.showinfo("PDF descargado", f"El archivo PDF ha sido descargado en: {archivo_pdf}")
         except Exception as e:
-            messagebox.showerror("Error", f"Error al descargar el archivo PDF: {e}")
+            messagebox.showerror("Error", f"Error al generar el PDF: {e}")
+
+    def enviar_correo_contacto(self):
+        try:
+            correo_destino = self.correo_entry.get()
+            if not correo_destino:
+                messagebox.showwarning("Correo vacío", "Por favor, ingrese un correo de destino.")
+                return
+            servidor = smtplib.SMTP("smtp.gmail.com", 587)
+            servidor.starttls()
+            servidor.login("riveramelvin628@gmail.com", "wvat ixwk jgoo nawy")
+            
+            mensaje = MIMEMultipart()
+            mensaje["From"] = "riveramelvin628@gmail.com"
+            mensaje["To"] = correo_destino
+            mensaje["Subject"] = "Contacto desde la Libreta"
+            
+            cuerpo = f"Hola, este es un mensaje de prueba desde la libreta de contactos.\n\nNombre: {self.nombre_entry.get()}\nTeléfono: {self.telefono_entry.get()}"
+            mensaje.attach(MIMEText(cuerpo, "plain"))
+            
+            servidor.sendmail("riveramelvin628@gmail.com", correo_destino, mensaje.as_string())
+            servidor.quit()
+            messagebox.showinfo("Correo enviado", f"Correo enviado a {correo_destino}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al enviar el correo: {e}")
 
 if __name__ == "__main__":
     root = tk.Tk()
