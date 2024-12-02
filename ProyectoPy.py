@@ -32,10 +32,16 @@ class LibretaContactosApp:
         tk.Label(entrada_frame, text='Nombre', bg="#53CDB8").grid(row=0, column=0)
         self.nombre_entry = tk.Entry(entrada_frame, width=25)
         self.nombre_entry.grid(row=1, column=0)
+        # Validación para el campo de nombre (solo letras)
+        self.nombre_entry.config(validate="key", validatecommand=(self.root.register(self.validar_nombre), "%P"))
+
 
         tk.Label(entrada_frame, text='Teléfono', bg="#53CDB8").grid(row=0, column=1)
         self.telefono_entry = tk.Entry(entrada_frame, width=20)
         self.telefono_entry.grid(row=1, column=1)
+        # Validación para el campo de teléfono (solo números)
+        self.telefono_entry.config(validate="key", validatecommand=(self.root.register(self.validar_telefono), "%P"))
+
 
         tk.Label(entrada_frame, text='Correo', bg="#53CDB8").grid(row=0, column=2)
         self.correo_entry = tk.Entry(entrada_frame, width=25)
@@ -69,6 +75,22 @@ class LibretaContactosApp:
         self.tabla.bind("<<TreeviewSelect>>", self.cargar_contacto_seleccionado)
 
 
+        # Etiqueta para mostrar el contador de contactos
+        self.contador_label = tk.Label(self.root, text="Cantidad de contactos: 0", bg="#53CDB8")
+        self.contador_label.grid(row=3, column=0, pady=10)
+
+    def validar_nombre(self, input_str):
+        """Función para validar que solo se ingresen letras en el campo de nombre."""
+        if input_str == "" or input_str.isalpha() or " " in input_str:
+            return True
+        return False
+
+    def validar_telefono(self, input_str):
+        """Función para validar que solo se ingresen números en el campo de teléfono."""
+        if input_str == "" or input_str.isdigit():
+            return True
+        return False
+
 
     def agregar_contacto(self):
         nombre, telefono, correo = self.nombre_entry.get(), self.telefono_entry.get(), self.correo_entry.get()
@@ -81,10 +103,17 @@ class LibretaContactosApp:
         self.tabla.insert("", "end", text=nombre, values=(telefono, correo))
         self.limpiar_entradas()
 
+
+        # Actualizar contador de contactos
+        self.contador_label.config(text=f"Cantidad de contactos: {len(self.tabla.get_children())}")
+
+
+
+
     def buscar_contacto(self):
         criterio = self.nombre_entry.get().lower()  #aqui covertimos a a minúsculas
         if not criterio:
-           messagebox.showinfo("Búsqueda vacía", "Por favor, ingrese un criterio para buscar.")
+           messagebox.showinfo("Búsqueda vacía", "Por favor, ingrese el nombre o letra del contacto a buscar.")
            return
 
     #limpiar cualquier selección anterior en la tabla
@@ -132,7 +161,7 @@ class LibretaContactosApp:
             messagebox.showwarning("Campo vacío", "Por favor, ingrese el nombre del contacto a eliminar.")
             return
             
-        confirmar = messagebox.askyesno("Eliminar Contacto", f"¿Eliminar el contacto '{nombre}'?")
+        confirmar = messagebox.askyesno("Eliminar Contacto", f"¿Estas seguro de eliminar a '{nombre}'?")
         if confirmar:
             try:
                 contactos_actuales = []
@@ -147,15 +176,20 @@ class LibretaContactosApp:
                     writer.writerows(contactos_actuales)
 
                 self.mostrar_contactos()
-                messagebox.showinfo("Contacto eliminado", f"El contacto '{nombre}' ha sido eliminado.")
+                messagebox.showinfo("Contacto eliminado", f"Se ha elimindado a '{nombre}' con exito.")
             except Exception as e:
                 messagebox.showerror("Error", f"Error al eliminar el contacto: {e}")
+
+
+                # Actualizar contador de contactos
+        self.contador_label.config(text=f"Cantidad de contactos: {len(self.tabla.get_children())}")
+
 
     def editar_contacto(self):
         #obtener la selección de la tabla
         item_seleccionado = self.tabla.selection()
         if not item_seleccionado:
-            messagebox.showwarning("Selección requerida", "Por favor, seleccione un contacto en la tabla para editar.")
+            messagebox.showwarning("Selección requerida", "Debe de seleccionar a quien desea editar.")
             return
 
         #obtener datos actuales del contacto seleccionado
@@ -206,7 +240,7 @@ class LibretaContactosApp:
         editar_ventana.geometry("300x150")
         editar_ventana.configure(bg="#53CDB8")
 
-        tk.Label(editar_ventana, text="¿Guardar cambios en el contacto?", bg="#53CDB8").pack(pady=20)
+        tk.Label(editar_ventana, text="¿Guardar los cambios?", bg="#53CDB8").pack(pady=20)
         tk.Button(editar_ventana, text="Guardar", command=guardar_cambios, bg="#FFBB20").pack(side=tk.LEFT, padx=20)
         tk.Button(editar_ventana, text="Cancelar", command=editar_ventana.destroy, bg="#F26262").pack(side=tk.RIGHT, padx=20)
 
@@ -214,9 +248,13 @@ class LibretaContactosApp:
         for item in self.tabla.get_children():
             self.tabla.delete(item)
         try:
+            contactos = []
             with open("libreta_contactos.csv", "r", newline='', encoding='utf-8') as f:
                 for nombre, telefono, correo in csv.reader(f):
                     self.tabla.insert("", "end", text=nombre, values=(telefono, correo))
+                    contactos.append((nombre, telefono, correo))
+        # Actualizar contador de contactos
+            self.contador_label.config(text=f"TOTAL DE CONTACTOS REGISTRADOS: {len(contactos)}")
         except FileNotFoundError:
             pass
 
@@ -303,7 +341,7 @@ class LibretaContactosApp:
             if not correo_destino:
                 messagebox.showwarning("Correo vacío", "Por favor, ingrese un correo de destino.")
                 return
-            servidor = smtplib.SMTP("smtp.gmail.com", 587)
+            servidor = smtplib.SMTP("smtp.gmail.com", 587)                                                                  
             servidor.starttls()
             servidor.login("riveramelvin628@gmail.com", "xtqm uagl sjpv btew")
             
