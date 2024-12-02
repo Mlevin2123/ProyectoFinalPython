@@ -17,7 +17,7 @@ class LibretaContactosApp:
         self.root.geometry("+350+80")
         self.root.resizable(0, 0)
 
-        # Menú principal
+        #menú principal
         menu = Menu(self.root)
         self.root.config(menu=menu)
         archivo_menu = Menu(menu, tearoff=0, bg="#FFBB20")
@@ -25,7 +25,7 @@ class LibretaContactosApp:
         archivo_menu.add_command(label="Cerrar", command=self.root.quit)
         menu.add_cascade(label="Menú", menu=archivo_menu)
 
-        # Marco de entrada de datos
+        #marco de entrada de datos
         entrada_frame = tk.LabelFrame(self.root, bg="#53CDB8")
         entrada_frame.grid(row=0, column=0)
 
@@ -41,7 +41,7 @@ class LibretaContactosApp:
         self.correo_entry = tk.Entry(entrada_frame, width=25)
         self.correo_entry.grid(row=1, column=2)
 
-        # Botones de acciones
+        #botones de acciones
         acciones_frame = ttkb.Frame(self.root)
         acciones_frame.grid(row=1, column=0, pady=10)
 
@@ -53,19 +53,19 @@ class LibretaContactosApp:
         ttkb.Button(acciones_frame, text="Descargar PDF", command=self.descargar_pdf, bootstyle="secondary").grid(row=0, column=5, padx=5)
         ttkb.Button(acciones_frame, text="Enviar Correo", command=self.enviar_correo_contacto, bootstyle="primary").grid(row=0, column=6, padx=5)
 
-        # Tabla de contactos
+        #tabla de contactos
         self.tabla = ttkb.Treeview(self.root, columns=("Teléfono", "Correo"), height=15)
         self.tabla.grid(row=2, column=0, padx=10, pady=10)
         self.tabla.heading("#0", text="Nombre")
         self.tabla.heading("Teléfono", text="Teléfono")
         self.tabla.heading("Correo", text="Correo")
 
-        # Scroll para la tabla
+        #scroll para la tabla
         scrollbar_y = ttkb.Scrollbar(self.root, orient="vertical", command=self.tabla.yview)
         scrollbar_y.grid(row=2, column=1, sticky="ns")
         self.tabla.configure(yscroll=scrollbar_y.set)
 
-        # Evento para cargar contacto al seleccionar
+        #evento para cargar contacto al seleccionar
         self.tabla.bind("<<TreeviewSelect>>", self.cargar_contacto_seleccionado)
 
 
@@ -82,15 +82,15 @@ class LibretaContactosApp:
         self.limpiar_entradas()
 
     def buscar_contacto(self):
-        criterio = self.nombre_entry.get().lower()  # Convertir a minúsculas
+        criterio = self.nombre_entry.get().lower()  #aqui covertimos a a minúsculas
         if not criterio:
            messagebox.showinfo("Búsqueda vacía", "Por favor, ingrese un criterio para buscar.")
            return
 
-    # Limpiar cualquier selección anterior en la tabla
+    #limpiar cualquier selección anterior en la tabla
         self.tabla.selection_remove(self.tabla.selection())
 
-    # Buscar coincidencias
+    #buscar coincidencias
         coincidencias = []
         for item in self.tabla.get_children():
          nombre = self.tabla.item(item, "text").lower()  # Convertir a minúsculas para comparar
@@ -98,7 +98,7 @@ class LibretaContactosApp:
             coincidencias.append(item)
 
         if coincidencias:
-        # Seleccionar las coincidencias en la tabla
+        #seleccionar las coincidencias en la tabla
          for item in coincidencias:
             self.tabla.selection_add(item)
         else:
@@ -107,16 +107,16 @@ class LibretaContactosApp:
 
 
     def cargar_contacto_seleccionado(self, event):
-        # Obtener el contacto seleccionado en la tabla
+        #obtener el contacto seleccionado en la tabla
         item_seleccionado = self.tabla.selection()
         if not item_seleccionado:
             return
 
-        # Obtener los datos del contacto
+        #obtener los datos del contacto
         contacto = self.tabla.item(item_seleccionado[0], "text")
         telefono, correo = self.tabla.item(item_seleccionado[0], "values")
 
-        # Cargar los datos en las entradas
+        #cargar los datos en las entradas
         self.nombre_entry.delete(0, tk.END)
         self.nombre_entry.insert(0, contacto)
         self.telefono_entry.delete(0, tk.END)
@@ -152,17 +152,17 @@ class LibretaContactosApp:
                 messagebox.showerror("Error", f"Error al eliminar el contacto: {e}")
 
     def editar_contacto(self):
-        # Obtener la selección de la tabla
+        #obtener la selección de la tabla
         item_seleccionado = self.tabla.selection()
         if not item_seleccionado:
             messagebox.showwarning("Selección requerida", "Por favor, seleccione un contacto en la tabla para editar.")
             return
 
-        # Obtener datos actuales del contacto seleccionado
+        #obtener datos actuales del contacto seleccionado
         contacto_actual = self.tabla.item(item_seleccionado, "text")
         telefono_actual, correo_actual = self.tabla.item(item_seleccionado, "values")
 
-        # Cargar los datos en las entradas
+        #cargar los datos en las entradas
         self.nombre_entry.delete(0, tk.END)
         self.nombre_entry.insert(0, contacto_actual)
         self.telefono_entry.delete(0, tk.END)
@@ -170,7 +170,7 @@ class LibretaContactosApp:
         self.correo_entry.delete(0, tk.END)
         self.correo_entry.insert(0, correo_actual)
 
-        # Confirmar y guardar cambios
+        #confirmar y guardar cambios
         def guardar_cambios():
             nuevo_nombre = self.nombre_entry.get()
             nuevo_telefono = self.telefono_entry.get()
@@ -180,7 +180,7 @@ class LibretaContactosApp:
                 messagebox.showwarning("Datos incompletos", "Por favor, complete todos los campos.")
                 return
 
-            # Actualizar el archivo CSV
+            #actualizar el archivo CSV
             contactos_actualizados = []
             with open("libreta_contactos.csv", "r", newline='', encoding="utf-8") as f:
                 reader = csv.reader(f)
@@ -194,13 +194,13 @@ class LibretaContactosApp:
                 writer = csv.writer(f)
                 writer.writerows(contactos_actualizados)
 
-            # Actualizar la tabla
+            #actualizar la tabla
             self.mostrar_contactos()
             self.limpiar_entradas()
             messagebox.showinfo("Contacto actualizado", f"El contacto '{nuevo_nombre}' ha sido actualizado.")
             editar_ventana.destroy()
 
-        # Crear una ventana emergente para confirmar la edición
+        #creamos una ventana emergente para confirmar la edición
         editar_ventana = tk.Toplevel(self.root)
         editar_ventana.title("Confirmar Edición")
         editar_ventana.geometry("300x150")
@@ -227,16 +227,16 @@ class LibretaContactosApp:
 
     def descargar_csv(self):
         try:
-            # Definir la ruta de descarga en la carpeta "Descargas"
+            #definir la ruta de descarga en la carpeta "Descargas"
             downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
             archivo_excel = os.path.join(downloads_path, "libreta_contactos.xlsx")
 
-            # Crear un libro de trabajo y una hoja
+            #crear un libro de trabajo y una hoja
             wb = Workbook()
             ws = wb.active
             ws.title = "Lista de los Contactos"
 
-            # Establecer el encabezado
+            # aqui establecemos el encabezado
             encabezado = ["Nombre", "Teléfono", "Correo"]
             for col_num, header in enumerate(encabezado, start=1):
                 cell = ws.cell(row=1, column=col_num, value=header)
@@ -264,30 +264,24 @@ class LibretaContactosApp:
             downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
             archivo_pdf = os.path.join(downloads_path, "libreta_contactos.pdf")
         
-        # Crear un objeto FPDF
             pdf = FPDF()
             pdf.add_page()
         
-        # Establecer fuente y tamaño
             pdf.set_font("Arial", style='B', size=14)
         
-        # Título del PDF
             pdf.cell(200, 10, txt="Libreta de Contactos", ln=True, align="C")
         
-        # Salto de línea
             pdf.ln(10)
         
-        # Establecer fuente para los datos de la tabla
             pdf.set_font("Arial", size=12)
         
-        # Encabezados de la tabla
             pdf.set_fill_color(200, 220, 255)
             pdf.cell(60, 10, "Nombre", border=1, align="C", fill=True)
             pdf.cell(50, 10, "Teléfono", border=1, align="C", fill=True)
             pdf.cell(80, 10, "Correo", border=1, align="C", fill=True)
             pdf.ln()
 
-        # Escribir los contactos en el PDF
+        #Escribir los contactos en el PDF
             with open("libreta_contactos.csv", "r", newline='', encoding="utf-8") as f:
                 for nombre, telefono, correo in csv.reader(f):
                     pdf.cell(60, 10, nombre, border=1, align="C")
@@ -295,7 +289,7 @@ class LibretaContactosApp:
                     pdf.cell(80, 10, correo, border=1, align="C")
                     pdf.ln()
 
-        # Guardar el archivo PDF
+        #aqui guardamos el archivo PDF
             pdf.output(archivo_pdf)
             messagebox.showinfo("PDF descargado", f"El archivo PDF ha sido descargado en: {archivo_pdf}")
         except Exception as e:
