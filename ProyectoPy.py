@@ -6,12 +6,14 @@ from fpdf import FPDF
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import ttkbootstrap as ttkb  # Mejora visual
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font
 
 class LibretaContactosApp:
     def __init__(self, root):
         self.root = root
         self.root.title('Libreta de Contactos V2.0')
-        self.root.configure(bg="#53CDB8")
         self.root.geometry("+350+80")
         self.root.resizable(0, 0)
 
@@ -40,28 +42,33 @@ class LibretaContactosApp:
         self.correo_entry.grid(row=1, column=2)
 
         # Botones de acciones
-        acciones_frame = tk.LabelFrame(self.root, bg="#53CDB8")
-        acciones_frame.grid(row=2, column=0, pady=5)
+        acciones_frame = ttkb.Frame(self.root)
+        acciones_frame.grid(row=1, column=0, pady=10)
 
-        tk.Button(acciones_frame, text="Agregar Contacto", command=self.agregar_contacto, bg="#FFBB20").grid(row=0, column=0, padx=2)
-        tk.Button(acciones_frame, text="Buscar Contacto", command=self.buscar_contacto, bg="#FFBB20").grid(row=0, column=1, padx=2)
-        tk.Button(acciones_frame, text="Eliminar Contacto", command=self.eliminar_contacto, bg="#F26262").grid(row=0, column=2, padx=2)
-        tk.Button(acciones_frame, text="Editar", command=self.editar_contacto, bg="#FFBB20").grid(row=0, column=3, padx=2)
-        tk.Button(acciones_frame, text="Descargar CSV", command=self.descargar_csv, bg="#FFBB20").grid(row=0, column=4, padx=2)
-        tk.Button(acciones_frame, text="Descargar PDF", command=self.descargar_pdf, bg="#FFBB20").grid(row=0, column=5, padx=2)
-        tk.Button(acciones_frame, text="Enviar Correo", command=self.enviar_correo_contacto, bg="#FFBB20").grid(row=0, column=6, padx=2)
+        ttkb.Button(acciones_frame, text="Agregar Contacto", command=self.agregar_contacto, bootstyle="success").grid(row=0, column=0, padx=5)
+        ttkb.Button(acciones_frame, text="Buscar Contacto", command=self.buscar_contacto, bootstyle="info").grid(row=0, column=1, padx=5)
+        ttkb.Button(acciones_frame, text="Eliminar Contacto", command=self.eliminar_contacto, bootstyle="danger").grid(row=0, column=2, padx=5)
+        ttkb.Button(acciones_frame, text="Editar", command=self.editar_contacto, bootstyle="warning").grid(row=0, column=3, padx=5)
+        ttkb.Button(acciones_frame, text="Descargar Excel", command=self.descargar_csv, bootstyle="secondary").grid(row=0, column=4, padx=5)
+        ttkb.Button(acciones_frame, text="Descargar PDF", command=self.descargar_pdf, bootstyle="secondary").grid(row=0, column=5, padx=5)
+        ttkb.Button(acciones_frame, text="Enviar Correo", command=self.enviar_correo_contacto, bootstyle="primary").grid(row=0, column=6, padx=5)
 
         # Tabla de contactos
-        self.tabla = ttk.Treeview(self.root, columns=("Teléfono", "Correo"), height=15)
-        self.tabla.grid(row=4, column=0, padx=10, pady=10)
+        self.tabla = ttkb.Treeview(self.root, columns=("Teléfono", "Correo"), height=15)
+        self.tabla.grid(row=2, column=0, padx=10, pady=10)
         self.tabla.heading("#0", text="Nombre")
         self.tabla.heading("Teléfono", text="Teléfono")
         self.tabla.heading("Correo", text="Correo")
 
         # Scroll para la tabla
-        scrollbar_y = tk.Scrollbar(self.root, orient="vertical", command=self.tabla.yview)
-        scrollbar_y.grid(row=4, column=1, sticky="ns")
+        scrollbar_y = ttkb.Scrollbar(self.root, orient="vertical", command=self.tabla.yview)
+        scrollbar_y.grid(row=2, column=1, sticky="ns")
         self.tabla.configure(yscroll=scrollbar_y.set)
+
+        # Evento para cargar contacto al seleccionar
+        self.tabla.bind("<<TreeviewSelect>>", self.cargar_contacto_seleccionado)
+
+
 
     def agregar_contacto(self):
         nombre, telefono, correo = self.nombre_entry.get(), self.telefono_entry.get(), self.correo_entry.get()
@@ -75,15 +82,49 @@ class LibretaContactosApp:
         self.limpiar_entradas()
 
     def buscar_contacto(self):
-        nombre = self.nombre_entry.get()
-        encontrado = False
+        criterio = self.nombre_entry.get().lower()  # Convertir a minúsculas
+        if not criterio:
+           messagebox.showinfo("Búsqueda vacía", "Por favor, ingrese un criterio para buscar.")
+           return
+
+    # Limpiar cualquier selección anterior en la tabla
+        self.tabla.selection_remove(self.tabla.selection())
+
+    # Buscar coincidencias
+        coincidencias = []
         for item in self.tabla.get_children():
-            if self.tabla.item(item, "text") == nombre:
-                self.tabla.selection_set(item)
-                encontrado = True
-                break
-        if not encontrado:
-            messagebox.showinfo("Contacto no encontrado", f"No se encontró el contacto '{nombre}'")
+         nombre = self.tabla.item(item, "text").lower()  # Convertir a minúsculas para comparar
+         if criterio in nombre:
+            coincidencias.append(item)
+
+        if coincidencias:
+        # Seleccionar las coincidencias en la tabla
+         for item in coincidencias:
+            self.tabla.selection_add(item)
+        else:
+         messagebox.showinfo("Sin resultados", f"No se encontraron contactos que coincidan con '{criterio}'")
+
+
+
+    def cargar_contacto_seleccionado(self, event):
+        # Obtener el contacto seleccionado en la tabla
+        item_seleccionado = self.tabla.selection()
+        if not item_seleccionado:
+            return
+
+        # Obtener los datos del contacto
+        contacto = self.tabla.item(item_seleccionado[0], "text")
+        telefono, correo = self.tabla.item(item_seleccionado[0], "values")
+
+        # Cargar los datos en las entradas
+        self.nombre_entry.delete(0, tk.END)
+        self.nombre_entry.insert(0, contacto)
+        self.telefono_entry.delete(0, tk.END)
+        self.telefono_entry.insert(0, telefono)
+        self.correo_entry.delete(0, tk.END)
+        self.correo_entry.insert(0, correo)
+
+
 
     def eliminar_contacto(self):
         nombre = self.nombre_entry.get()
@@ -185,27 +226,82 @@ class LibretaContactosApp:
         self.correo_entry.delete(0, tk.END)
 
     def descargar_csv(self):
-        messagebox.showinfo("Descarga", "La descarga del archivo CSV está disponible en la carpeta del proyecto.")
+        try:
+            # Definir la ruta de descarga en la carpeta "Descargas"
+            downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
+            archivo_excel = os.path.join(downloads_path, "libreta_contactos.xlsx")
+
+            # Crear un libro de trabajo y una hoja
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Lista de los Contactos"
+
+            # Establecer el encabezado
+            encabezado = ["Nombre", "Teléfono", "Correo"]
+            for col_num, header in enumerate(encabezado, start=1):
+                cell = ws.cell(row=1, column=col_num, value=header)
+                cell.font = Font(bold=True)  # Títulos en negrita
+                cell.alignment = Alignment(horizontal="center")  # Centrar el texto
+
+            # Escribir los datos de los contactos
+            with open("libreta_contactos.csv", "r", newline='', encoding="utf-8") as f:
+                reader = csv.reader(f)
+                for row_num, row in enumerate(reader, start=2):  # Comenzar desde la fila 2
+                    for col_num, value in enumerate(row, start=1):
+                        ws.cell(row=row_num, column=col_num, value=value)
+
+            # Guardar el archivo Excel en la carpeta de Descargas
+            wb.save(archivo_excel)
+
+            # Mostrar mensaje de éxito
+            messagebox.showinfo("Excel descargado", f"El archivo Excel ha sido descargado en: {archivo_excel}")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al generar el archivo Excel: {e}")
 
     def descargar_pdf(self):
         try:
             downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
             archivo_pdf = os.path.join(downloads_path, "libreta_contactos.pdf")
-            
+        
+        # Crear un objeto FPDF
             pdf = FPDF()
             pdf.add_page()
-            pdf.set_font("Arial", size=12)
+        
+        # Establecer fuente y tamaño
+            pdf.set_font("Arial", style='B', size=14)
+        
+        # Título del PDF
             pdf.cell(200, 10, txt="Libreta de Contactos", ln=True, align="C")
+        
+        # Salto de línea
+            pdf.ln(10)
+        
+        # Establecer fuente para los datos de la tabla
+            pdf.set_font("Arial", size=12)
+        
+        # Encabezados de la tabla
+            pdf.set_fill_color(200, 220, 255)
+            pdf.cell(60, 10, "Nombre", border=1, align="C", fill=True)
+            pdf.cell(50, 10, "Teléfono", border=1, align="C", fill=True)
+            pdf.cell(80, 10, "Correo", border=1, align="C", fill=True)
+            pdf.ln()
 
+        # Escribir los contactos en el PDF
             with open("libreta_contactos.csv", "r", newline='', encoding="utf-8") as f:
                 for nombre, telefono, correo in csv.reader(f):
-                    pdf.ln(10)
-                    pdf.cell(200, 10, txt=f"{nombre} - {telefono} - {correo}", ln=True)
+                    pdf.cell(60, 10, nombre, border=1, align="C")
+                    pdf.cell(50, 10, telefono, border=1, align="C")
+                    pdf.cell(80, 10, correo, border=1, align="C")
+                    pdf.ln()
 
+        # Guardar el archivo PDF
             pdf.output(archivo_pdf)
             messagebox.showinfo("PDF descargado", f"El archivo PDF ha sido descargado en: {archivo_pdf}")
         except Exception as e:
-            messagebox.showerror("Error", f"Error al generar el PDF: {e}")
+         messagebox.showerror("Error", f"Error al generar el PDF: {e}")
+
+
 
     def enviar_correo_contacto(self):
         try:
@@ -232,7 +328,7 @@ class LibretaContactosApp:
             messagebox.showerror("Error", f"Error al enviar el correo: {e}")
 
 if __name__ == "__main__":
-    root = tk.Tk()
+    root = ttkb.Window(themename="superhero")
     app = LibretaContactosApp(root)
     app.mostrar_contactos()
     root.mainloop()
